@@ -1,4 +1,4 @@
-#include "common.h"
+#include "common.hpp"
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -23,7 +23,7 @@ int recv_all(int sockfd, void *buffer, size_t len) {
  	while (bytes_remaining) {
 		size_t curr_bytes = recv(sockfd, buffer, bytes_remaining, 0);
 		if (curr_bytes <= 0)
-			return curr_bytes;
+			break;
 
 		bytes_received += curr_bytes;
 		bytes_remaining -= curr_bytes;
@@ -53,7 +53,7 @@ int send_all(int sockfd, void *buffer, size_t len) {
 	while (bytes_remaining) {
 		size_t curr_bytes = send(sockfd, buffer, bytes_remaining, 0);
 		if (curr_bytes <= 0)
-			return curr_bytes;
+			break;
 
 		bytes_sent += curr_bytes;
 		bytes_remaining -= curr_bytes;

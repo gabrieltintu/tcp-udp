@@ -8,7 +8,7 @@
 #include <fstream>
 #include <poll.h>
 #include "helpers.h"
-#include "common.h"
+#include "common.hpp"
 
 std::ofstream fout("file_subscriber.out");
 
@@ -81,10 +81,19 @@ int main(int argc, char *argv[]) {
 		for (int i = 0; i < num_sockets; i++) {
 			if (poll_fds[i].revents & POLLIN) {
 				if (poll_fds[i].fd == tcpSocket) {
-					if (recv_all(tcpSocket, &recv_packet, sizeof(recv_packet)) == 0) {
+					struct tcp_message message;
+					rc = recv_all(tcpSocket, &message, sizeof(message));
+					if (rc == 0) {
+						fout << "nu e bn\n";
 						close(tcpSocket);
 						return 0;
 					}
+					// fout << rc;
+					// fout.flush();
+					std::cout << message.ip << ":" << message.port << " - " << message.topic << " - " << message.data_type << " - " << message.content << "\n";
+					fflush(stdout);
+					// fout << message.ip << ":" << message.port << " - " << message.topic << " - " << message.data_type << " - " << message.content << "\n";
+					// fout.flush();
 				} else if (poll_fds[i].fd == 0) {
 					fgets(buff, MAX_LEN - 1, stdin);
 				
@@ -118,12 +127,12 @@ int main(int argc, char *argv[]) {
 						if (space_pos != std::string::npos) {
 							topic = command.substr(space_pos + 1);
 						}
-						fout << "topic " << topic << "\n";
-						fout.flush();
+						// fout << "topic " << topic << "\n";
+						// fout.flush();
 
 						std::cout << "Subscribed to topic " << topic;
-						fout << "Subscribed to topic " << topic << "\n";
-						fout.flush();
+						// fout << "Subscribed to topic " << topic << "\n";
+						// fout.flush();
 					} else if (strncmp(buff, "unsubscribe", 11) == 0) {
 						struct chat_packet send_unsubscribe;
 						strcpy(send_unsubscribe.message, buff);
