@@ -23,12 +23,6 @@
 
 std::ofstream fout("file_server.out");
 
-
-
-
-
-// struct message_to_client {};
-
 struct subscriber {
 	bool connected;
 	std::set<std::string> subscribed_topics;
@@ -39,9 +33,7 @@ struct subscriber {
 std::vector<std::string> split_topic(std::string str) {
 	std::vector<std::string> result;
     std::string word;
-	// if (word[word.size()] == '\n') {
-	// 	word[word.size()] = '\0';
-	// }
+
     for (char ch : str) {
         if (ch != '/' && ch != '\n') {
             word += ch;
@@ -63,53 +55,34 @@ bool check_wildcards(std::string wc_topic, std::string topic)
 {
 	std::vector<std::string> wc_t_arr = split_topic(wc_topic);
 	std::vector<std::string> t_arr = split_topic(topic);
-	fout << "a intrat iun check wc\n";
+
 	int i = 0, j = 0;
-	fout << "wc size: " << wc_t_arr.size() << "\n";
-	fout << " size: " << t_arr.size() << "\n";
+
 	while (i != wc_t_arr.size() && j != t_arr.size()) {
-		fout << "wc_t_arr[" << i << "]: " << wc_t_arr[i] << "\n";
-		fout.flush();
-		fout << "t_arr[" << j << "]: " << t_arr[j] << "\n";
-		fout.flush();
 		if (wc_t_arr[i] == "+") {
 			i++;
 			j++;
-			fout << "cazul cu +\n";
-			fout.flush();
 			continue;
 		}
 
 		if (wc_t_arr[i] == "*") {
 			if (i + 1 == wc_t_arr.size()) {
-				fout << "suge o\n";
-				fout.flush();
 				return true;
 			}
 			
 			j++;
-			if (j == t_arr.size()) {
-				fout << "pula mea 1\n";
-				fout.flush();
+			if (j == t_arr.size())
 				return false;
-			}
 
 			if (wc_t_arr[i + 1] != t_arr[j])
 				continue;
 			
-			fout << "i " << i << "\n";
-			fout.flush();
-			fout << "j " << j << "\n";
-			fout.flush();
 			i++;
 			continue;
 		}
 
-		if (wc_t_arr[i] != t_arr[j]) {
-			fout << "pula mea 2\n";
-			fout.flush();
+		if (wc_t_arr[i] != t_arr[j])
 			return false;
-		}
 
 		i++;
 		j++;
@@ -117,8 +90,6 @@ bool check_wildcards(std::string wc_topic, std::string topic)
 
 	if (i != wc_t_arr.size() || j != t_arr.size())
 		return false;
-	fout << "TRUE?????\n";
-	fout.flush();
 	return true;
 
 }
@@ -134,12 +105,7 @@ void build_client_message(tcp_message& message,char buff[])
 			content = (int32_t)unsgn_content;
 			if (sgn == 1)
 				content = -content;
-			// fout << "sgn: " << sgn << "\n";
-			// fout.flush();
-			// fout << "content: " << sgn_content << "\n";
-			// fout.flush();
-			// strncpy(message.data_type, "INT", MAX_TYPE);
-			// message.data_type[3] = '\0';
+
 			sprintf(message.data_type, "INT");
 
 			sprintf(message.content, "%d", content);
@@ -149,10 +115,7 @@ void build_client_message(tcp_message& message,char buff[])
 		case 1: {
 			double content = ntohs(*(uint16_t *)(buff + MAX_TOPIC));
 			content /= 100;
-			// fout << "content: " << content << "\n";
-			// fout.flush();
-			// strncpy(message.data_type, "REAL", MAX_TYPE);
-			// message.data_type[4] = '\0';
+
 			sprintf(message.data_type, "SHORT_REAL");
 
 			sprintf(message.content, "%.2f", content);
@@ -167,8 +130,6 @@ void build_client_message(tcp_message& message,char buff[])
 			if (sgn == 1)
 				content = -content;
 
-			// strncpy(message.data_type, "FLOAT", MAX_TYPE);
-			// message.data_type[5] = '\0';
 			sprintf(message.data_type, "FLOAT");
 
 			// Create a stringstream object
@@ -190,16 +151,11 @@ void build_client_message(tcp_message& message,char buff[])
 			char content[MAX_CONTENT];
 			strcpy(content, buff + MAX_TOPIC);
 
-			// strncpy(message.data_type, "STRING", MAX_TYPE);
-			// message.data_type[6] = '\0';
-
 			sprintf(message.data_type, "STRING");
-
 
 			sprintf(message.content, "%s", content);
 			break;
 		}
-
 	}
 }
 
@@ -218,29 +174,25 @@ int main(int argc, char *argv[]) {
 	std::vector<pollfd> poll_fds;
 	std::vector<subscriber> subscribers;
 
-	struct sockaddr_in cli_addr;
+	struct sockaddr_in serv_addr, cli_addr;
 	socklen_t cli_len = sizeof(cli_addr);
+	socklen_t socket_len = sizeof(struct sockaddr_in);
 
-	int num_sockets = 1;
 	int rc;
+
 	// set port
 	uint16_t port;
-	rc = sscanf(argv[1], "%hu", &port);
-	DIE(rc != 1, "Given port is invalid");
+	port = atoi(argv[1]);
 	fout << "server: " << port << "\n";
 	fout.flush();
 
 	// create TCP socket
 	int sock_tcp, sock_udp;
-	struct sockaddr_in serv_addr;
-	socklen_t socket_len = sizeof(struct sockaddr_in);
-
 
 	// creare socket pt TCP + bind + listen
 	sock_tcp = socket(AF_INET, SOCK_STREAM, 0);
 
-	// Facem adresa socket-ului reutilizabila, ca sa nu primim eroare in caz ca
-	// rulam de 2 ori rapid
+	// make socket address reusable
 	const int enable = 1;
 	if (setsockopt(sock_tcp, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
 		perror("setsockopt(SO_REUSEADDR) failed");
@@ -254,9 +206,8 @@ int main(int argc, char *argv[]) {
 	DIE(sock_tcp < 0, "eroare socket - tcp\n");
 	rc = bind(sock_tcp, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
 	DIE(rc < 0, "eroare bind - tcp\n");
-	rc = listen(sock_tcp, SOMAXCONN / 4);
+	rc = listen(sock_tcp, SOMAXCONN);
 	DIE(rc < 0, "eroare listen - udp\n");
-	
 
 	// Adaugam noul file descriptor (socketul pe care se asculta conexiuni) in
 	// multimea poll_fds
@@ -268,36 +219,24 @@ int main(int argc, char *argv[]) {
 	poll_fds.push_back(listen_poll_fd);
 
 	sock_udp = socket(AF_INET, SOCK_DGRAM, 0);
-	const int enable2 = 1;
-	if (setsockopt(sock_udp, SOL_SOCKET, SO_REUSEADDR, &enable2, sizeof(int)) < 0)
-		perror("setsockopt(SO_REUSEADDR) failed");
 
 	rc = bind(sock_udp, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
 	DIE(rc < 0, "eroare bind - tcp\n");
-	
-
 
 	pollfd listen_poll_fd_udp;
 	listen_poll_fd_udp.fd = sock_udp;
 	listen_poll_fd_udp.events = POLLIN;
 
 	poll_fds.push_back(listen_poll_fd_udp);
-	num_sockets++;
-
-	// std::cout << "Server is running on port " << port << std::endl;
-	fout << "inainte de while\n";
-	fout.flush();
 
 	pollfd stdin_poll_fd;
 	stdin_poll_fd.fd = STDIN_FILENO;
 	stdin_poll_fd.events = POLLIN;
 	poll_fds.push_back(stdin_poll_fd);
-	num_sockets++;
 	
-	bool running = true;
+	int num_sockets = 3;
 
-
-	while (running) {
+	while (1) {
 		// exit command 
 		char buff[MAX_LEN];
 		
@@ -324,9 +263,9 @@ int main(int argc, char *argv[]) {
 						accept(sock_tcp, (struct sockaddr *)&cli_addr, &cli_len);
 					DIE(newsockfd < 0, "accept");
 
-					int neagle = 1;
-                    rc = setsockopt(newsockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&neagle, sizeof(int));
-                    DIE(rc < 0, "eroare Neagle");
+					int nagle = 1;
+                    rc = setsockopt(newsockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&nagle, sizeof(int));
+                    DIE(rc < 0, "eroare Nagle");
 
 
 					// Adaugam noul socket intors de accept() la multimea descriptorilor
@@ -347,10 +286,19 @@ int main(int argc, char *argv[]) {
 					struct chat_packet received_packet;
 					rc = recv_all(newsockfd, &received_packet, sizeof(received_packet));
 		  			DIE(rc < 0, "recv");
-										
+					std::string client_data(received_packet.message);		
 					subscriber new_subscriber;
-					size_t message_length = strlen(received_packet.message); // Find length of message
-					new_subscriber.client_id = std::string(received_packet.message, message_length);
+
+					size_t space_pos = client_data.find(' ');
+					if (space_pos == std::string::npos) {
+						std::cerr << "Error: No space found in input string." << std::endl;
+						return 1;
+					}
+					// Extract ID_CLIENT
+					std::string id_client = client_data.substr(0, space_pos);
+					std::string ip_port = client_data.substr(space_pos + 1);
+					
+					new_subscriber.client_id = id_client;
 
 					// Check if there is a subscriber with the received client ID
 					auto it = std::find_if(subscribers.begin(), subscribers.end(), [&](const subscriber& sub) {
@@ -361,7 +309,7 @@ int main(int argc, char *argv[]) {
 						if (it->connected == false) {
 							it->connected = true;
 							it->sock_fd = newsockfd;
-							std::cout << "New client " << received_packet.message << " connected from " << port << ".\n";
+							std::cout << "New client " << id_client << " connected from " << ip_port << ".\n";
 						} else {
 							close(newsockfd);
 							std::cout << "Client " << it->client_id << " already connected." << "\n";
@@ -372,7 +320,7 @@ int main(int argc, char *argv[]) {
 						new_subscriber.subscribed_topics = std::set<std::string>();
 						new_subscriber.sock_fd = newsockfd;
 						subscribers.push_back(new_subscriber);
-						std::cout << "New client " << received_packet.message << " connected from " << port << ".\n";
+						std::cout << "New client " << id_client << " connected from " << ip_port << ".\n";
 					}
 				} else if (poll_fds[i].fd == sock_udp) {
 				
@@ -388,18 +336,25 @@ int main(int argc, char *argv[]) {
 					message.topic[MAX_TOPIC - 1] = '\0';
 					for (auto sub : subscribers) {
 						bool to_send = false;
+
+						if (sub.connected == false)
+							continue;
+
 						for (auto sub_topic : sub.subscribed_topics) {
 							std::string topic(message.topic);
-							
-							if (sub_topic.find("+") != std::string::npos || sub_topic.find("*") != std::string::npos) {
-								to_send = check_wildcards(sub_topic, topic);
-								fout << "to send in if: " << to_send << "\n";
-								fout.flush();
-							}
-							fout << "to send: " << to_send << "\n";
-							fout.flush();
-							if ((to_send || strncmp(message.topic, sub_topic.c_str(), strlen(message.topic)) == 0) && sub.connected == true) {
-								rc = send_all(sub.sock_fd, &message, sizeof(message));
+								
+							to_send = check_wildcards(sub_topic, topic);
+
+							if (to_send) {
+								uint16_t actual_size = MAX_UDP_LEN - MAX_CONTENT + strlen(message.content);
+								message.content[MAX_UDP_LEN - MAX_CONTENT + strlen(message.content)] = '\0';
+
+								rc = send(sub.sock_fd, &actual_size, sizeof(actual_size), 0);
+								DIE(rc < 0, "send size");
+
+								rc = send_all(sub.sock_fd, &message, actual_size);
+								DIE(rc < 0, "send from udp to subs");
+
 								break;
 							}
 						}
@@ -415,8 +370,6 @@ int main(int argc, char *argv[]) {
 						});
 						it->connected = false;
 						std::cout << "Client " << it->client_id << " disconnected." << "\n";
-						// fout << it->connected << "\n";
-						// fout.flush();
 						close(it->sock_fd);
 						for (int j = i; j < num_sockets - 1; j++) {
 							poll_fds[j] = poll_fds[j + 1];
@@ -441,11 +394,6 @@ int main(int argc, char *argv[]) {
 						topic = received_message.substr(space_pos + 1);
 					}
 
-					// fout << "command: " << command << "\n";\
-					// fout.flush();
-					// fout << "topic: " << topic << "\n";
-					// fout.flush();
-
 					auto it = std::find_if(subscribers.begin(), subscribers.end(), [&](const subscriber& sub) {
 						return sub.sock_fd == poll_fds[i].fd;
 					});
@@ -460,12 +408,7 @@ int main(int argc, char *argv[]) {
 						it->subscribed_topics.erase(topic);
 					}
 
-					int k = 0;
-					for (auto topic : it->subscribed_topics) {
-						fout << "topic subscribed [" <<  k << "] " << topic << "\n";
-						fout.flush();
-						k++;
-					}
+				
 				}
 			}
 		}

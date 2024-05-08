@@ -4,20 +4,19 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
+
 int send_all(int sockfd, void *buff, size_t len);
 int recv_all(int sockfd, void *buff, size_t len);
 
-/* Dimensiunea maxima a mesajului */
-#define MSG_MAXSIZE 1024
 #define MAX_LEN 100
 #define MAX_TOPIC 51
 #define MAX_TYPE 11
 #define MAX_CONTENT 1501
-#define MAX_UDP_LEN 1552
+#define MAX_UDP_LEN 1584
 
 struct chat_packet {
   uint16_t len;
-  char message[MSG_MAXSIZE + 1];
+  char message[MAX_LEN];
 };
 
 struct tcp_message {

@@ -12,13 +12,6 @@ int recv_all(int sockfd, void *buffer, size_t len) {
   size_t bytes_received = 0;
   size_t bytes_remaining = len;
   char *buff = (char *)buffer;
-  /*
-
-      while(bytes_remaining) {
-          TODO: Make the magic happen
-      }
-
-  */
 
  	while (bytes_remaining) {
 		size_t curr_bytes = recv(sockfd, buffer, bytes_remaining, 0);
@@ -43,12 +36,6 @@ int send_all(int sockfd, void *buffer, size_t len) {
   size_t bytes_sent = 0;
   size_t bytes_remaining = len;
   char *buff = (char *)buffer;
-  /*
-      while(bytes_remaining) {
-          TODO: Make the magic happen
-      }
-
-  */
 
 	while (bytes_remaining) {
 		size_t curr_bytes = send(sockfd, buffer, bytes_remaining, 0);
