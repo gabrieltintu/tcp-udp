@@ -36,6 +36,94 @@ struct subscriber {
 	std::string client_id;
 };
 
+std::vector<std::string> split_topic(std::string str) {
+	std::vector<std::string> result;
+    std::string word;
+	// if (word[word.size()] == '\n') {
+	// 	word[word.size()] = '\0';
+	// }
+    for (char ch : str) {
+        if (ch != '/' && ch != '\n') {
+            word += ch;
+
+        } else {
+            result.push_back(word);
+            word.clear();
+        }
+    }
+
+    if (!word.empty()) {
+        result.push_back(word);
+    }
+
+	return result;
+}
+
+bool check_wildcards(std::string wc_topic, std::string topic)
+{
+	std::vector<std::string> wc_t_arr = split_topic(wc_topic);
+	std::vector<std::string> t_arr = split_topic(topic);
+	fout << "a intrat iun check wc\n";
+	int i = 0, j = 0;
+	fout << "wc size: " << wc_t_arr.size() << "\n";
+	fout << " size: " << t_arr.size() << "\n";
+	while (i != wc_t_arr.size() && j != t_arr.size()) {
+		fout << "wc_t_arr[" << i << "]: " << wc_t_arr[i] << "\n";
+		fout.flush();
+		fout << "t_arr[" << j << "]: " << t_arr[j] << "\n";
+		fout.flush();
+		if (wc_t_arr[i] == "+") {
+			i++;
+			j++;
+			fout << "cazul cu +\n";
+			fout.flush();
+			continue;
+		}
+
+		if (wc_t_arr[i] == "*") {
+			if (i + 1 == wc_t_arr.size()) {
+				fout << "suge o\n";
+				fout.flush();
+				return true;
+			}
+			
+			j++;
+			if (j == t_arr.size()) {
+				fout << "pula mea 1\n";
+				fout.flush();
+				return false;
+			}
+
+			if (wc_t_arr[i + 1] != t_arr[j])
+				continue;
+			
+			fout << "i " << i << "\n";
+			fout.flush();
+			fout << "j " << j << "\n";
+			fout.flush();
+			i++;
+			continue;
+		}
+
+		if (wc_t_arr[i] != t_arr[j]) {
+			fout << "pula mea 2\n";
+			fout.flush();
+			return false;
+		}
+
+		i++;
+		j++;
+	}
+
+	if (i != wc_t_arr.size() || j != t_arr.size())
+		return false;
+	fout << "TRUE?????\n";
+	fout.flush();
+	return true;
+
+}
+
+
 void build_client_message(tcp_message& message,char buff[])
 {
 	switch (buff[MAX_TOPIC - 1]) {
@@ -113,8 +201,6 @@ void build_client_message(tcp_message& message,char buff[])
 		}
 
 	}
-	fout << "data type in functie: " << message.data_type << "\n";
-	fout.flush();
 }
 
 
@@ -233,7 +319,7 @@ int main(int argc, char *argv[]) {
 				} else if (poll_fds[i].fd == sock_tcp) {
 					// Am primit o cerere de conexiune pe socketul de listen, pe care
 					// o acceptam
-					fout << "a gasit o conexiune\n";
+					
 					const int newsockfd =
 						accept(sock_tcp, (struct sockaddr *)&cli_addr, &cli_len);
 					DIE(newsockfd < 0, "accept");
@@ -295,37 +381,26 @@ int main(int argc, char *argv[]) {
 					// udp_message *recv_message = (udp_message *)msg_buff;
 					DIE(rc < 0, "receive udp");
 					tcp_message message;
-					fout << "sizeof " << sizeof(tcp_message) << "\n";
 					build_client_message(message, msg_buff);
-					// fout << "topic: " << recv_message->topic << "\n"; 
-					// fout.flush();
-					fout << "data type: " << message.data_type << "\n"; //aici il afiseaza
-					fout.flush();	
-					// fout << "content: " << message.content << "\n";
-					// fout.flush();
-					// fout << "content: " << recv_message->content << "\n";
-					// fout.flush();
-					strcpy(message.ip, inet_ntoa(cli_addr.sin_addr));							// DECE?
+					strcpy(message.ip, inet_ntoa(cli_addr.sin_addr));
 					message.port = port;
-					fout << "data type INTRE: " << message.data_type << "\n";
-					fout.flush();	
 					strncpy(message.topic, msg_buff, MAX_TOPIC);
 					message.topic[MAX_TOPIC - 1] = '\0';
-					fout << "dupa message.topic plkm\n";
-					fout.flush();
-					fout << "data type inainte de for: " << message.data_type << "\n"; //aici e gol
-					fout.flush();	
 					for (auto sub : subscribers) {
+						bool to_send = false;
 						for (auto sub_topic : sub.subscribed_topics) {
-							fout << "sub_topic: " << sub_topic << "\n";
+							std::string topic(message.topic);
+							
+							if (sub_topic.find("+") != std::string::npos || sub_topic.find("*") != std::string::npos) {
+								to_send = check_wildcards(sub_topic, topic);
+								fout << "to send in if: " << to_send << "\n";
+								fout.flush();
+							}
+							fout << "to send: " << to_send << "\n";
 							fout.flush();
-							fout << "topic cautat: " << message.topic << "\n";
-							if (strncmp(message.topic, sub_topic.c_str(), strlen(message.topic)) == 0 && sub.connected == true) {
-								// fout << "MUIEEE\n";
-								// fout.flush();
-								// fout << message.ip << ":" << message.port << " - " << message.topic << " - " << message.data_type << " - " << message.content << "\n";
-								// fout.flush();
+							if ((to_send || strncmp(message.topic, sub_topic.c_str(), strlen(message.topic)) == 0) && sub.connected == true) {
 								rc = send_all(sub.sock_fd, &message, sizeof(message));
+								break;
 							}
 						}
 					}
@@ -380,12 +455,17 @@ int main(int argc, char *argv[]) {
 						it->subscribed_topics.insert(topic);
 					}
 
-					// int k = 0;
-					// for (auto topic : it->subscribed_topics) {
-					// 	fout << "topic subscribed [" <<  k << "] " << topic << "\n";
-					// 	fout.flush();
-					// 	k++;
-					// }
+
+					if (it != subscribers.end() && command == "unsubscribe") {
+						it->subscribed_topics.erase(topic);
+					}
+
+					int k = 0;
+					for (auto topic : it->subscribed_topics) {
+						fout << "topic subscribed [" <<  k << "] " << topic << "\n";
+						fout.flush();
+						k++;
+					}
 				}
 			}
 		}
