@@ -1,3 +1,5 @@
+// TINTU Gabriel-Claudiu 323CAb - 2023-2024
+
 #ifndef __COMMON_H__
 #define __COMMON_H__
 

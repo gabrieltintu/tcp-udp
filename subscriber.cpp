@@ -1,3 +1,5 @@
+// TINTU Gabriel-Claudiu 323CAb - 2023-2024
+
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
@@ -9,7 +11,6 @@
 #include "helpers.hpp"
 #include "common.hpp"
 
-#define MAX_LEN 100
 #define MAX_SOCK 2
 
 /**

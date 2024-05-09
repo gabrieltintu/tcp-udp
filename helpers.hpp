@@ -1,3 +1,5 @@
+// TINTU Gabriel-Claudiu 323CAb - 2023-2024
+
 #ifndef _HELPERS_H
 #define _HELPERS_H 1
 
@@ -5,8 +7,8 @@
 #include <stdlib.h>
 
 /*
- * Macro de verificare a erorilor
- * Exemplu:
+ * Macro to check the errors
+ * Example:
  * 		int fd = open (file_name , O_RDONLY);
  * 		DIE( fd == -1, "open failed");
  */
