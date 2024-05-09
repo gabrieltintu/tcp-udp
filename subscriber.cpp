@@ -5,12 +5,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <fstream>
 #include <poll.h>
-#include "helpers.h"
+#include "helpers.hpp"
 #include "common.hpp"
-
-std::ofstream fout("file_subscriber.out");
 
 #define MAX_LEN 100
 #define MAX_SOCK 2
@@ -31,16 +28,15 @@ void send_to_server(char buff[], int sockfd)
 	std::string input(send_message.message, send_message.len);
 
 	size_t space_pos = input.find(' ');
-	
-	// Extract the first part of the message before the space
+
+	// extract command
 	std::string command = input.substr(0, space_pos);
 
-	// Extract the second part of the message after the space
+	// extract topic
 	std::string topic;
 
-	if (space_pos != std::string::npos) {
+	if (space_pos != std::string::npos)
 		topic = input.substr(space_pos + 1);
-	}
 
 	if (command == "subscribe")
 		std::cout << "Subscribed to topic " << topic;
@@ -53,7 +49,7 @@ void send_to_server(char buff[], int sockfd)
  */
 bool recv_from_server(pollfd poll_fds[], int sockfd)
 {
-	struct tcp_message message;
+	tcp_message message;
 	uint16_t actual_size = 0;
 	int rc;
 
@@ -63,63 +59,67 @@ bool recv_from_server(pollfd poll_fds[], int sockfd)
 	rc = recv_all(sockfd, &message, actual_size);
 
 	if (rc == 0) {
-		for (int i = 0; i < MAX_SOCK; i++) {
+		for (int i = 0; i < MAX_SOCK; i++)
 			close(poll_fds[i].fd);
-		}
+
 		return true;
 	}
 
-	std::cout  << message.ip << ":" << message.port << " - " << message.topic << " - " << message.data_type << " - " << message.content << "\n";
+	DIE(rc < 0, "receiving message");
+
+	std::cout << message.ip << ":" << message.port << " - " << message.topic;
+	std::cout << " - " << message.data_type << " - " << message.content << "\n";
 	return false;
 }
 
-
 int main(int argc, char *argv[]) {
-	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
-
+	// check arg
 	if (argc != 4) {
 		std::cerr << "Usage: " << argv[0] << " <ID_CLIENT> <IP_SERVER> <PORT_SERVER>\n";
-		return EXIT_FAILURE;
+		return 1;
 	}
 
+	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+
 	pollfd poll_fds[MAX_SOCK];
-	// Parse command-line arguments
+
 	std::string client_id = argv[1];
 	std::string server_ip = argv[2];
 	std::string port_str = argv[3];
+
 	int port = std::atoi(argv[3]);
 	int rc;
 	// Create TCP socket
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd == -1) {
-		std::cerr << "Error creating TCP socket\n";
-		return EXIT_FAILURE;
-	}
+	DIE(sockfd < 0, "sockfd");
 
-	// Initialize server address structure
 	sockaddr_in server_addr;
+	socklen_t socket_len = sizeof(sockaddr_in);
+
+	memset(&server_addr, 0, socket_len);
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 	inet_pton(AF_INET, server_ip.c_str(), &server_addr.sin_addr);
 
-	// Connect to the server
-	rc = connect(sockfd, (struct sockaddr*) &server_addr, sizeof(server_addr));
+	// connect to the server
+	rc = connect(sockfd, (sockaddr *)&server_addr, sizeof(server_addr));
 	DIE(rc < 0, "connect");
-	
-	poll_fds[0].fd = sockfd; // pt server
+
+	poll_fds[0].fd = sockfd;
 	poll_fds[0].events = POLLIN;
 
-	poll_fds[1].fd = 0; // pt stdin
+	poll_fds[1].fd = STDIN_FILENO;
 	poll_fds[1].events = POLLIN;
 
 	int num_sockets = 2;
 
-	struct chat_packet sent_packet;
+	// send client data to the server
+	chat_packet sent_packet;
 	std::string client_data = client_id + " " + server_ip + ":" + port_str;
 	sent_packet.len = client_data.size() + 1;
 	strcpy(sent_packet.message, client_data.c_str());
 
-	rc = send_all(sockfd, &sent_packet, sizeof(sent_packet));    
+	rc = send_all(sockfd, &sent_packet, sizeof(sent_packet));
 	DIE(rc < 0, "send");
 
 	// Main loop to receive commands from user
@@ -136,13 +136,13 @@ int main(int argc, char *argv[]) {
 			fgets(buff, MAX_LEN - 1, stdin);
 
 			if (strcmp(buff, "exit\n") == 0) {
-				for (int i = 0; i < num_sockets; i++) {
+				for (int i = 0; i < num_sockets; i++)
 					close(poll_fds[i].fd);
-				}
+
 				return 0;
-			} else {
-				send_to_server(buff, sockfd);
 			}
+
+			send_to_server(buff, sockfd);
 		}
 	}
 

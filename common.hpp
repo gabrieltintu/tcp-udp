@@ -15,8 +15,8 @@ int recv_all(int sockfd, void *buff, size_t len);
 #define MAX_UDP_LEN 1584
 
 struct chat_packet {
-  uint16_t len;
-  char message[MAX_LEN];
+	uint16_t len;
+	char message[MAX_LEN];
 };
 
 struct tcp_message {
