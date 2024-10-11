@@ -1,6 +1,6 @@
-# TINTU Gabriel-Claudiu 323CAb - 2023-2024
+# TINTU Gabriel-Claudiu 2024
 
-## PCOM - Second Assignment: Client-Server App TCP & UDP
+## PCOM - Client-Server App TCP & UDP
 
 ### Server Program
 
