@@ -1,6 +1,6 @@
-# TINTU Gabriel-Claudiu 2024
+### © 2024 Gabriel-Claudiu TINTU
 
-## PCOM - Client-Server App TCP & UDP
+# Client-Server App TCP & UDP
 
 ### Server Program
 
@@ -52,7 +52,6 @@ It initially creates a TCP socket, connects to the specified server IP address a
 
 ### Other
 
-- Used the TCP laboratory as a starting point to complete the assignment.
 - Created a structure to send the received messages from UDP clients to the subscribers, containing: IP, port, topic, type of data, and content.
 - Created a structure to retain the subscribers' data: connection status, subscribed topics, socket file descriptor, and client ID.
 
